@@ -1,0 +1,52 @@
+name: Deploy image to App Service
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image-name:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    permissions:
+      attestations: read
+      id-token: write
+      contents: read
+      checks: write
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy-azure-webapp.outputs.webapp-url }}
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ vars.CONTAINER_REGISTRY }}
+
+      - name: Verify attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify \
+            oci://${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.image-tag }} \
+            -R ${{ github.repository}} \
+            --signer-workflow ${{ vars.WORKFLOWS-LIB-REPO }}/.github/workflows/reusable-build.yaml
+
+      - uses: azure/webapps-deploy@v3
+        id: deploy-azure-webapp
+        with:
+          app-name: ${{ vars.APP_SERVICE_NAME }}
+          images: ${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.image-version }}
+          slot-name: production

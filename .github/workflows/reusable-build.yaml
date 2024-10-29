@@ -1,0 +1,57 @@
+name: Build and push image to container registry
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        required: true
+        type: string
+      tag-name:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      build-directory:
+        required: true
+        type: string
+
+jobs:
+  build-and-push:
+    permissions:
+      attestations: write
+      checks: write
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag-name }}
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ vars.CONTAINER_REGISTRY }}
+
+      - name: Build and push docker image
+        id: container-image-build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.build-directory }}
+          push: true
+          tags: ${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.tag-name }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}
+          subject-digest: ${{ steps.container-image-build-and-push.outputs.digest }}
+          push-to-registry: true
