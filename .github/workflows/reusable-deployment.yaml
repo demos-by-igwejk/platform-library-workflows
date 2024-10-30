@@ -48,5 +48,5 @@ jobs:
         id: deploy-azure-webapp
         with:
           app-name: ${{ vars.APP_SERVICE_NAME }}
-          images: ${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.image-version }}
+          images: ${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.image-tag }}
           slot-name: production
