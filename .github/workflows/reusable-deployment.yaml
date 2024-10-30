@@ -42,7 +42,7 @@ jobs:
           gh attestation verify \
             oci://${{ vars.CONTAINER_REGISTRY }}/${{ inputs.image-name }}:${{ inputs.image-tag }} \
             -R ${{ github.repository}} \
-            --signer-workflow ${{ vars.WORKFLOWS-LIB-REPO }}/.github/workflows/reusable-build.yaml
+            --signer-workflow ${{ vars.PLATFORM_LIBRARY_WORKFLOWS }}/.github/workflows/reusable-build.yaml
 
       - uses: azure/webapps-deploy@v3
         id: deploy-azure-webapp
